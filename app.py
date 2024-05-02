@@ -2,6 +2,7 @@ import streamlit as st
 from annotated_text import annotated_text
 import pandas as pd
 import numpy as np
+import random
 import os
 from pdf_reader import create_document_store, rag_pipeline_generator, reference_finder_pipeline_generator
 
@@ -13,6 +14,7 @@ approved_claims = [
     'TREMFYA® demonstrated a superior PASI 90 response vs. COSENTYX at Week 48 (ITT population)',
     'Indication not previously mentioned and clinical use:TREMFYA®/TREMFYA ONE-PRESS® is also indicated for the treatment of adult patients with active psoriatic arthritis. TREMFYA®/TREMFYA ONE-PRESS® can be used alone or in combination with a conventional disease-modifying antirheumatic drug (cDMARD) (e.g., methotrexate).'
 ]
+
 
 user_inputs = {
     'brand': 'Tremfya',
@@ -62,6 +64,12 @@ def claim_reference_finder(pipeline, claim:str, user_inputs:dict):
 def get_safety_info():
     df = pd.read_excel("./static/safety.xlsx")
     return df['claim'].values
+
+def get_static_claims(n_random=3):
+    df = pd.read_excel("./static/claims.xlsx")
+    out = list(zip(df['text'], df['reference']))
+    # randomly return 3 claims
+    return random.sample(out, n_random)
 
 #### app
 with st.sidebar:
@@ -127,6 +135,13 @@ if document_store and question and openai_api_key:
         "Feel free to contact me if you have any questions"
     )
     show_generated_email(claims_with_ref)
+    output_template['body'] = get_static_claims()
+    st.markdown("#### Approved Claims from Library")
+    for claim, ref in output_template['body']:
+        annotated_text(
+            claim, " ",
+            [(ref, f"{user_inputs['brand']}_approved", REF_COLOR)]
+        )
     st.markdown("### Safety Information")
     output_template['safety'] = get_safety_info()
     for info in output_template['safety']:
